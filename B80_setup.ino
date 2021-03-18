@@ -147,8 +147,6 @@ void setup() {
     // following line sets the RTC to the date & time this sketch was compiled
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
-
-  updateSystemRtcFromRtc();
   
   // Init the SD card
 //  u8g2.setCursor(0, lineY);

@@ -58,6 +58,9 @@ void drawSensorBox(uint16_t y, uint16_t x, uint16_t width, uint16_t height, uint
 }
 
 void refreshM5Screen(bool init, uint8_t screen_idx){
+#ifdef DEBUG_MUTEX
+  SerialMon.println(">>> refreshM5Screen IN");
+#endif
   char charBuf[30];
   uint16_t mesureBackgroundColor, referenceBackgroundColor, warningBackgroundColor;
   unsigned int csvFrequencySec = configuration.getCsvFrequencySec();
@@ -84,12 +87,29 @@ void refreshM5Screen(bool init, uint8_t screen_idx){
         unsigned long secToRelayCheck = (millis() - lastRelayCheckTime)/1000;
         //    u8g2.setCursor(10,y); u8g2.printf("  Relay:  %s (%d sec)", (relayState)?"OFF":"ON", minStateDurationSec-secToRelayCheck);
         if (relayState==RELAY_OPENED) {
-          drawBox(160, 0, 160, 30, TFT_WHITE, TFT_BLUE, true, "RELAY: OFF", 2);
+          drawBox(160, 0, 30, 30, TFT_WHITE, TFT_GREY, true, "R", 2);
         }
         else {
-          drawBox(160, 0, 160, 30, TFT_BLACK, TFT_YELLOW, true, "RELAY: ON", 2);
+          drawBox(160, 0, 30, 30, TFT_BLACK, TFT_YELLOW, true, "R", 2);
         }
-      
+
+        // Network status
+        uint32_t statusColor;
+        statusColor = (thingSpeakClient.isSimUnlocked())?TFT_DARKGREEN:TFT_GREY;
+        drawBox(190, 0, 25, 30, TFT_WHITE, statusColor, true, "S", 2);
+
+        statusColor = (thingSpeakClient.isNetworkConnected())?TFT_DARKGREEN:TFT_GREY;
+        drawBox(215, 0, 25, 30, TFT_WHITE, statusColor, true, "N", 2);
+
+        sprintf(charBuf, "%02d", thingSpeakClient.getSignalQuality());
+        drawBox(240, 0, 30, 30, TFT_WHITE, statusColor, true, charBuf, 2);
+
+        statusColor = (thingSpeakClient.isGprsConnected())?TFT_DARKGREEN:TFT_GREY;
+        drawBox(270, 0, 25, 30, TFT_WHITE, statusColor, true, "I", 2);
+
+        statusColor = (thingSpeakClient.isMqttClientConnected())?TFT_DARKGREEN:TFT_GREY;
+        drawBox(295, 0, 25, 30, TFT_WHITE, statusColor, true, "C", 2);
+        
         // Countdown
         sprintf(charBuf, "%ds", minStateDurationSec-secToRelayCheck);
         drawBox(0, 30, 100, 30, TFT_BLACK, TFT_WHITE, true, charBuf, 2);
@@ -184,7 +204,9 @@ void refreshM5Screen(bool init, uint8_t screen_idx){
     default:
       break;
   }
-    
+#ifdef DEBUG_MUTEX
+  SerialMon.println("<<< refreshM5Screen OUT");
+#endif
 }
 
 void relayManagementTask(void *pvParameters) {
@@ -238,13 +260,29 @@ void relayManagementTask(void *pvParameters) {
 
   //Logic is made with relay activated when pin is LOW.
   for(;;) {
+#ifdef DEBUG_MUTEX
+    SerialMon.println(">>> relayManagementTask IN");
+#endif
     dbgcnt++;
     core = xPortGetCoreID();
     //SerialMon.printf("%s(%d): Wake up !!! \n", pcTaskName, core);
+
+    if (lastRtcUpdateTime == 0 || millis()-lastRtcUpdateTime > (unsigned long)60 * 1000) {
+      SerialMon.println("Updating External RTC from GSM Network time");
+      updateExtRtcFromGsmNetwork();
+      SerialMon.println("Updating Internal RTC from External RTC");
+      updateSystemRtcFromRtc();
+      lastRtcUpdateTime=millis();
+    }
+
+    if (lastGsmCheckTime == 0 || millis()-lastGsmCheckTime > (unsigned long)60 * 1000) {
+      thingSpeakClient.check();
+      lastGsmCheckTime=millis();
+    }
+
     
     //Manage relay and update time from RTC
     if (millis()-lastRelayCheckTime > (unsigned long)minStateDurationSec * 1000) {
-      updateSystemRtcFromRtc();
       //SerialMon.printf("###### DEBUG: hadRelayOnInLastCsvPeriod = %d\n", hadRelayOnInLastCsvPeriod);
       lastRelayCheckTime = millis();
       SerialMon.printf("%s(%d): Manage relay (pin=%d)\n", pcTaskName, core, relay_pin);
@@ -395,7 +433,7 @@ void relayManagementTask(void *pvParameters) {
       //}
       if (configuration.isUploadToCloudEnabled()){
         SerialMon.println("Cloud: Checking if reconnection is needed.");
-        if (thingSpeakClient.reconnect()) {
+        if (thingSpeakClient.reconnect(true)) {
           SerialMon.println("Cloud: Updating ThingSpeak.");
           SerialMon.printf("   %s | %s\n", measuresTopicStr, measuresMsgStr);
           thingSpeakClient.mqttPublishFeed(measuresTopicStr, measuresMsgStr);
@@ -407,7 +445,10 @@ void relayManagementTask(void *pvParameters) {
         }
       }
     }
-    
+
+#ifdef DEBUG_MUTEX
+    SerialMon.println("<<< relayManagementTask OUT");
+#endif
     //Sleep a bit
     vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS( 100 ));
   }

@@ -7,6 +7,7 @@
 
 #define VERSION "0.1"
 #define M5STACK
+//#define DEBUG_MUTEX
 
 /* TODO
  *  Control IOT : https://nl.mathworks.com/help/thingspeak/mqtt-publish-and-subscribe-with-esp8266.html
@@ -44,6 +45,7 @@
 
 #include <M5Stack.h>
 #include <Free_Fonts.h>
+#define TFT_GREY 0x7BEF
 
 #define TINY_GSM_MODEM_SIM800      // Modem is SIM800
 #define TINY_GSM_RX_BUFFER   1024  // Set RX buffer to 1Kb
@@ -244,7 +246,8 @@ void convertAddress2Chars(const DeviceAddress deviceAddressBytes, DeviceAddressS
 
 class ThingSpeakClient {
   private:
-    SemaphoreHandle_t mutex = NULL;
+    SemaphoreHandle_t modemMutex = NULL;
+    SemaphoreHandle_t dataMutex = NULL;
     uint32_t _gsmBaudRate = 115200; // Set to 0 for Auto-Detect
     char _simPIN[10];
     char _apn[60];
@@ -253,15 +256,23 @@ class ThingSpeakClient {
     char _mqttBroker[40];
     char _mqttUser[40];
     char _mqttPwd[40];
+    bool _isNetworkConnected = false;
+    bool _isSimUnlocked = false;
+    bool _isGprsConnected = false;
+    bool _isMqttClientConnected = false;
+    uint32_t _signalQuality = 0;
+    
     //TinyGsm _modem;
     //TinyGsmClient _client;
     //PubSubClient _mqttClient;
     char alphanum[63] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";  // For random generation of client ID.
+    
   public:
     void begin(const char* simPIN, const char* apn, const char* apnUser,
                        const char* apnPwd, const char* mqttBroker, 
                        const char* mqttUser, const char* mqttPwd) {
-      this->mutex = xSemaphoreCreateMutex();
+      this->modemMutex = xSemaphoreCreateMutex();
+      this->dataMutex = xSemaphoreCreateMutex();
       strcpy(this->_simPIN, simPIN);
       strcpy(this->_apn, apn);
       strcpy(this->_apnUser, apnUser);
@@ -269,13 +280,14 @@ class ThingSpeakClient {
       strcpy(this->_mqttBroker, mqttBroker);
       strcpy(this->_mqttUser, mqttUser);
       strcpy(this->_mqttPwd, mqttPwd);
+      xSemaphoreTake( this->modemMutex, portMAX_DELAY );
       if (!this->_gsmBaudRate) {
         SerialMon.println("Getting gsmBaudRate");
         this->_gsmBaudRate = TinyGsmAutoBaud(SerialAT);
         SerialMon.print("gsmBaudRate: ");
         SerialMon.println(this->_gsmBaudRate); //115200
       }
-      
+      xSemaphoreGive( this->modemMutex );
       if (!this->_gsmBaudRate) {
         SerialMon.println(F("***********************************************************"));
         SerialMon.println(F(" Module does not respond!"));
@@ -293,14 +305,100 @@ class ThingSpeakClient {
       delay(6000);
     }
 
-    bool reconnect() {
-      xSemaphoreTake( this->mutex, 5000/portTICK_PERIOD_MS );
+    bool isGprsConnected() {
+      bool isGprsConnected;
+      xSemaphoreTake( this->dataMutex, ( TickType_t ) 100 );
+      isGprsConnected=this->_isGprsConnected;
+      xSemaphoreGive( this->dataMutex );
+      return isGprsConnected;
+    }
+    void setIsGprsConnected(bool isGprsConnected) {
+      xSemaphoreTake( this->dataMutex, ( TickType_t ) 100 );
+      this->_isGprsConnected = isGprsConnected;
+      xSemaphoreGive( this->dataMutex ); 
+    }
+
+    bool isNetworkConnected() {
+      bool isNetworkConnected;
+      xSemaphoreTake( this->dataMutex, ( TickType_t ) 100 );
+      isNetworkConnected=this->_isNetworkConnected;
+      xSemaphoreGive( this->dataMutex );
+      return isNetworkConnected;
+    }
+    void setIsNetworkConnected(bool isNetworkConnected) {
+      xSemaphoreTake( this->dataMutex, ( TickType_t ) 100 );
+      this->_isNetworkConnected = isNetworkConnected;
+      xSemaphoreGive( this->dataMutex ); 
+    }
+
+    bool isSimUnlocked() {
+      bool isSimUnlocked;
+      xSemaphoreTake( this->dataMutex, ( TickType_t ) 100 );
+      isSimUnlocked=this->_isSimUnlocked;
+      xSemaphoreGive( this->dataMutex );
+      return isSimUnlocked;
+    }
+    void setIsSimUnlocked(bool isSimUnlocked) {
+      xSemaphoreTake( this->dataMutex, ( TickType_t ) 100 );
+      this->_isSimUnlocked = isSimUnlocked;
+      xSemaphoreGive( this->dataMutex ); 
+    }
+
+    bool isMqttClientConnected() {
+      bool isMqttClientConnected;
+      xSemaphoreTake( this->dataMutex, ( TickType_t ) 100 );
+      isMqttClientConnected=this->_isMqttClientConnected;
+      xSemaphoreGive( this->dataMutex );
+      return isMqttClientConnected;
+    }
+    void setIsMqttClientConnected(bool isMqttClientConnected) {
+      xSemaphoreTake( this->dataMutex, ( TickType_t ) 100 );
+      this->_isMqttClientConnected = isMqttClientConnected;
+      xSemaphoreGive( this->dataMutex ); 
+    }
+
+    uint32_t getSignalQuality() {
+      uint32_t signalQuality;
+      xSemaphoreTake( this->dataMutex, ( TickType_t ) 100 );
+      signalQuality=this->_signalQuality;
+      xSemaphoreGive( this->dataMutex );
+      return signalQuality;
+    }
+    void setSignalQuality(uint32_t signalQuality) {
+      xSemaphoreTake( this->dataMutex, ( TickType_t ) 100 );
+      this->_signalQuality = signalQuality;
+      xSemaphoreGive( this->dataMutex ); 
+    }
+
+    void getNetworkTime(int* year, int* month, int* day, int* hour, int* minute,
+                      int* second, float* timezone) {
+      if (xSemaphoreTake( this->modemMutex, ( TickType_t ) 100 ) == pdTRUE ) {
+        modem.getGSMDateTime(DATE_FULL);
+        modem.getNetworkTime(year, month, day, hour, minute, second, timezone);
+        xSemaphoreGive( this->modemMutex );                           
+      }
+    }
+
+    void check() {
+      xSemaphoreTake( this->modemMutex, portMAX_DELAY );
+      this->setIsNetworkConnected(modem.isNetworkConnected());
+      this->setIsSimUnlocked((modem.getSimStatus() == 1));
+      this->setIsGprsConnected(modem.isGprsConnected());
+      this->setSignalQuality(modem.getSignalQuality());
+      xSemaphoreGive( this->modemMutex );
+    }
+    
+    bool reconnect(bool includeMqtt) {
+      xSemaphoreTake( this->modemMutex, portMAX_DELAY );
       SerialMon.println("Reconnecting MQTT");
       
       char clientID[9];
       
       if (!modem.isNetworkConnected()) {
         SerialMon.println("Network not connected. Initializing modem...");
+        this->setIsNetworkConnected(false);
+        this->setIsGprsConnected(false);
+        this->setIsMqttClientConnected(false);
         //modem.init();
         modem.restart();
       
@@ -309,44 +407,61 @@ class ThingSpeakClient {
           SerialMon.println("Unlocking SIM.");
           modem.simUnlock(this->_simPIN);
         }
+        if( modem.getSimStatus() != 1 ){
+          this->setIsSimUnlocked(false);
+        }
+        else {
+          this->setIsSimUnlocked(true);
+        }
 
         SerialMon.print("Waiting for network...");
         if (!modem.waitForNetwork()) {
           SerialMon.println(" fail");
+          this->setIsNetworkConnected(false);
           delay(10000);
+          xSemaphoreGive( this->modemMutex );
           return false;
         }
         SerialMon.println(" success");
+        this->setIsNetworkConnected(true);
       
         if (modem.isNetworkConnected()) {
           SerialMon.println("Network connected");
+          this->setIsNetworkConnected(true);
         }
         else {
           SerialMon.println("Network not connected !?!");
+          xSemaphoreGive( this->modemMutex );
+          this->setIsNetworkConnected(false);
           return false;
         }
       }
       if (!modem.isGprsConnected()) {
         SerialMon.print("Connecting to APN (GPRS): ");
         SerialMon.println(this->_apn);
+        this->setIsGprsConnected(false);
         if (!modem.gprsConnect(this->_apn, this->_apnUser, this->_apnPwd)) {
           SerialMon.println(" fail");
           delay(10000);  
+          xSemaphoreGive( this->modemMutex );
           return false;
         }
         else {
           SerialMon.println(" OK");
+          this->setIsGprsConnected(true);
         }
         
         if (modem.isGprsConnected()) {
           SerialMon.println("GPRS connected");
         }
         else {
+          xSemaphoreGive( this->modemMutex );
           return false;
         }
       }
             
-      if (!mqttClient.connected()) {
+      if (includeMqtt && !mqttClient.connected()) {
+        this->setIsMqttClientConnected(false);
         mqttClient.setServer(this->_mqttBroker, 1883);   // Set the MQTT broker details.
         Serial.print("Attempting MQTT connection...");
         // Generate ClientID
@@ -360,6 +475,7 @@ class ThingSpeakClient {
         if (mqttClient.connect(clientID, this->_mqttUser, this->_mqttPwd)) 
         {
           Serial.println("connected");
+          this->setIsMqttClientConnected(true);
         } else 
         {
           Serial.print("failed, rc=");
@@ -367,10 +483,13 @@ class ThingSpeakClient {
           // See https://pubsubclient.knolleary.net/api.html#state for the failure code explanation.
           Serial.print(mqttClient.state());
           Serial.println(" try again in 5 seconds");
+          this->setIsMqttClientConnected(false);
+          xSemaphoreGive( this->modemMutex );
           return false;
         }
       }
-      xSemaphoreGive( this->mutex );
+      this->setIsMqttClientConnected(true);
+      xSemaphoreGive( this->modemMutex );
       return true;
     }
 
@@ -388,7 +507,9 @@ class ThingSpeakClient {
       //length = topicString.length();
       //const char *topicBuffer;
       //topicBuffer = topicString.c_str();
+      xSemaphoreTake( this->modemMutex, 5000/portTICK_PERIOD_MS );
       mqttClient.publish( topicStr, msgStr );
+      xSemaphoreGive( this->modemMutex );
     }
 };
 
@@ -979,8 +1100,10 @@ unsigned long sderrorcnt = 0;
 unsigned int csvSize = 0;
 
 unsigned long lastRelayCheckTime=0;
+unsigned long lastGsmCheckTime=0;
 unsigned long lastIdleScreenRefresh=0;
 unsigned long lastCsvUpdateTime=0;
+unsigned long lastRtcUpdateTime=0;
 
 //using namespace ::ace_button;
 //using namespace ::SimpleHacks;
@@ -1214,6 +1337,24 @@ void updateSystemRtcFromRtc(){
   now = rtc.now();
   xSemaphoreGive( rtcMutex );
   esp32rtc.setTime(now.unixtime());
+}
+void updateExtRtcFromGsmNetwork() {
+  xSemaphoreTake( rtcMutex, portMAX_DELAY );
+  int   netYear    = 0;
+  int   netMonth   = 0;
+  int   netDay     = 0;
+  int   netHour    = 0;
+  int   netMin     = 0;
+  int   netSec     = 0;
+  float netTimezone = 0;
+  thingSpeakClient.getNetworkTime(&netYear, &netMonth, &netDay, &netHour, &netMin, &netSec, &netTimezone);
+  SerialMon.printf("Network Time: %d/%d/%d %d:%d:%d TZ%.1f\n", netYear, netMonth, netDay, netHour, netMin, netSec, netTimezone);
+  //NOK: 2004 1 1 0 1 58 1.000000
+  //OK:  2021 3 18 18 4 13 1.000000
+  if (netYear != 2004) {
+    rtc.adjust(DateTime(netYear, netMonth, netDay, netHour, netMin, netSec));
+  }
+  xSemaphoreGive( rtcMutex );
 }
 
 //void refreshIdleScreen() {

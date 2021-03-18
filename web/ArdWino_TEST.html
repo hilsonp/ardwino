@@ -263,7 +263,7 @@ $(document).ready(function()
       formatter: function () {
          // The first returned item is the header, subsequent items are the
          // points
-         return ['<b>' + moment(this.x).format('MM/DD<br/>HH:mm') + '</b>'].concat(
+         return ['<b>' + (moment(this.x+(myOffset * 60000))).format('MM/DD<br/>HH:mm') + '</b>'].concat(
              this.points ?
                  this.points.map(function (point) {
                     if (point.series.name == 'Relay') {

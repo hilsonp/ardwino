@@ -21,6 +21,9 @@ void sensorManagementTask(void *pvParameters)
   uint8_t core;
   
   for(;;) {
+#ifdef DEBUG_MUTEX
+  SerialMon.println(">>> sensorManagementTask IN");
+#endif
     core = xPortGetCoreID();
     SerialMon.printf("%s(%d): Manage sensors\n", pcTaskName, core);
 
@@ -52,7 +55,10 @@ void sensorManagementTask(void *pvParameters)
         }
       }
     }
-    
+
+#ifdef DEBUG_MUTEX
+  SerialMon.println("<<< sensorManagementTask OUT");
+#endif
     //vTaskDelay( pdMS_TO_TICKS( 500 ) );
     vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS( 10000 ) ); // toutes les 10000 ms
   }
