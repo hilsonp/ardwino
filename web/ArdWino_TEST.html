@@ -242,7 +242,8 @@ $(document).ready(function()
 				animation: true,
 				step: false,
         turboThrehold:1000,
-				borderWidth: 0
+				borderWidth: 0,
+        showInNavigator: true
 			}
 		},
     tooltip: {
@@ -305,14 +306,14 @@ $(document).ready(function()
 		exporting: {
 		  enabled: true,
       csv: {
-        dateFormat: '%d/%m/%Y %I:%M:%S %p'
+        dateFormat: '%d/%m/%Y %H:%M:%S'
         }
 		},
 		legend: {
 		  enabled: true
 		},
     navigator: {
-      baseSeries: 0,  //select which series to show in history navigator, First series is 0
+      //: 1,  //select which series to show in history navigator, First series is 0
       series: {
             includeInCSVExport: false
         }
