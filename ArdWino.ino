@@ -256,11 +256,11 @@ class ThingSpeakClient {
     char _mqttBroker[40];
     char _mqttUser[40];
     char _mqttPwd[40];
-    bool _isNetworkConnected = false;
-    bool _isSimUnlocked = false;
-    bool _isGprsConnected = false;
-    bool _isMqttClientConnected = false;
-    uint32_t _signalQuality = 0;
+    volatile bool _isNetworkConnected = false;
+    volatile bool _isSimUnlocked = false;
+    volatile bool _isGprsConnected = false;
+    volatile bool _isMqttClientConnected = false;
+    volatile uint32_t _signalQuality = 0;
     
     //TinyGsm _modem;
     //TinyGsmClient _client;

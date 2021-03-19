@@ -94,21 +94,35 @@ void refreshM5Screen(bool init, uint8_t screen_idx){
         }
 
         // Network status
+        unsigned long debugTimer = millis();
         uint32_t statusColor;
+        //SerialMon.printf("### Start : %d\n", millis()-debugTimer);
         statusColor = (thingSpeakClient.isSimUnlocked())?TFT_DARKGREEN:TFT_GREY;
+        //SerialMon.printf("### Sim : %d\n", millis()-debugTimer);
+        //debugTimer = millis();
         drawBox(190, 0, 25, 30, TFT_WHITE, statusColor, true, "S", 2);
 
         statusColor = (thingSpeakClient.isNetworkConnected())?TFT_DARKGREEN:TFT_GREY;
+        //SerialMon.printf("### Net : %d\n", millis()-debugTimer);
+        //debugTimer = millis();
         drawBox(215, 0, 25, 30, TFT_WHITE, statusColor, true, "N", 2);
 
         sprintf(charBuf, "%02d", thingSpeakClient.getSignalQuality());
+        //SerialMon.printf("### Signal : %d\n", millis()-debugTimer);
+        //debugTimer = millis();
         drawBox(240, 0, 30, 30, TFT_WHITE, statusColor, true, charBuf, 2);
 
         statusColor = (thingSpeakClient.isGprsConnected())?TFT_DARKGREEN:TFT_GREY;
+        //SerialMon.printf("### Gprs : %d\n", millis()-debugTimer);
+        //debugTimer = millis();
         drawBox(270, 0, 25, 30, TFT_WHITE, statusColor, true, "I", 2);
 
         statusColor = (thingSpeakClient.isMqttClientConnected())?TFT_DARKGREEN:TFT_GREY;
+        //SerialMon.printf("### Mqtt : %d\n", millis()-debugTimer);
+        //debugTimer = millis();
         drawBox(295, 0, 25, 30, TFT_WHITE, statusColor, true, "C", 2);
+
+        //SerialMon.printf("### Refresh : %d\n", millis()-debugTimer);
         
         // Countdown
         sprintf(charBuf, "%ds", minStateDurationSec-secToRelayCheck);
