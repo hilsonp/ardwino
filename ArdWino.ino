@@ -19,8 +19,8 @@
 #include <Arduino.h>
 
 #define ESP32_RTOS
-#include "OTA.h"
-#include <credentials.h>
+//#include "OTA.h"
+//#include <credentials.h>
 
 //#include "SerialDebug.h" // https://github.com/JoaoLopesF/SerialDebug
 //#include <U8g2lib.h>     // Screen library // https://p3dt.net/u8g2sim/

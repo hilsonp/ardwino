@@ -1,5 +1,5 @@
 void setup() { 
-  setupOTA("Ardwino", mySSID, myPASSWORD);
+  //setupOTA("Ardwino", mySSID, myPASSWORD);
   M5.begin();
   m5LcdWidth=M5.Lcd.width();
   m5LcdHeight=M5.Lcd.height();
