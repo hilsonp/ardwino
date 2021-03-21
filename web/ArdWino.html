@@ -21,6 +21,7 @@ var channelsLoaded = 0;
 // put your ThingSpeak Channel#, Channel Name, and API keys here.
 // fieldList shows which field you want to load, and which axis to display that field on, 
 // the 'T' Temperature left axis, or the 'O' Other right axis.
+var channelColors = ['#434348','#9DC7F1', '#90ED7D','#E4D354','#F7A35C','#F15C80','#8085E9','#bfbfbf'];
 var channelKeys =[];
 channelKeys.push({channelNumber:1314260, name:'Ardwino',key:'XNNP0Z67RYCEG2AV',
                   fieldList:[{field:1,axis:'R'}, {field:2,axis:'T'}, {field:3,axis:'T'}, {field:4,axis:'T'}, {field:5,axis:'T'}, {field:6,axis:'T'}, {field:7,axis:'T'}]});
@@ -48,6 +49,38 @@ function HideAll(){
       continue;
     dynamicChart.series[index].hide();
     //window.console && console.log('Series Number:',index,' Name:',dynamicChart.series[index].name);
+  }
+  //});
+            
+}
+      
+function ShowAll(){
+  for (var index=0; index<dynamicChart.series.length; index++)  // iterate through each series
+  { 
+    if (dynamicChart.series[index].name == 'Navigator')
+      continue;
+    dynamicChart.series[index].show();
+    //window.console && console.log('Series Number:',index,' Name:',dynamicChart.series[index].name);
+  }
+  //});
+            
+}
+      
+function ShowMain(){
+  for (var index=0; index<dynamicChart.series.length; index++)  // iterate through each series
+  { 
+    if (dynamicChart.series[index].name == 'Navigator')
+      continue;
+    window.console && console.log('Series Number:',index,' Name:',dynamicChart.series[index].name);
+    var serieName = dynamicChart.series[index].name;
+    if (serieName.includes('Relay') || serieName.includes('Sky') || serieName.includes('Ground'))
+    {
+      dynamicChart.series[index].show();
+    }
+    else 
+    {
+      dynamicChart.series[index].hide();
+    }
   }
   //});
             
@@ -292,16 +325,50 @@ $(document).ready(function()
 			}
 		},
 		yAxis: [{
-            title: {
-                text: 'Temperature °C'
-            },
-            id: 'T'
-    }, {
-            title: {
-                text: 'Relay'
-            },
-            opposite: true,
-            id: 'R'
+              title: {
+                  text: 'Temperature °C'
+              },
+              plotBands: [{ // Freezing
+                from: -100.0,
+                to: 0.0,
+                color: 'rgba(68, 170, 213, 0.1)',
+                label: {
+                    text: 'Freezing',
+                    style: {
+                        color: '#606060'
+                    }
+                }
+              },
+              { // Blowing allowed
+                from: 0.0,
+                to: 1.0,
+                color: 'rgba(255, 255, 255, 0.1)',
+                label: {
+                    text: '',
+                    style: {
+                        color: '#606060'
+                    }
+                }
+              },
+              { // Hot
+                from: 1.0,
+                to: 100.0,
+                color: 'rgba(228, 211, 84, 0.1)',
+                label: {
+                    text: 'Blowing allowed',
+                    style: {
+                        color: '#606060'
+                    }
+                }
+              },
+              ],
+              id: 'T'
+            }, {
+              title: {
+                  text: 'Relay'
+              },
+              opposite: true,
+              id: 'R'
     }],
 		exporting: {
 		  enabled: true,
@@ -332,7 +399,8 @@ $(document).ready(function()
                                 index:channelKeys[channelIndex].fieldList[fieldIndex].series,
                                 yAxis:channelKeys[channelIndex].fieldList[fieldIndex].axis,
                                 //visible:false,
-                              name: channelKeys[channelIndex].fieldList[fieldIndex].name});
+                              name: channelKeys[channelIndex].fieldList[fieldIndex].name,
+                              color: channelColors[fieldIndex]});
     }
   }
 	// set chart labels here so that decoding occurs properly
@@ -341,6 +409,7 @@ $(document).ready(function()
 
 	// draw the chart
   dynamicChart = new Highcharts.StockChart(chartOptions);
+  ShowMain();
 
   // update series number to account for the navigator series (The historical series at the bottom) which is the first series.
   for (var channelIndex=0; channelIndex<channelKeys.length; channelIndex++)  // iterate through each channel
@@ -440,21 +509,22 @@ function loadChannelHistory(sentChannelIndex,channelNumber,key,sentFieldList,sen
     <div id="chart-container" style="height: 600px;"><br>
       Highstock Chart Here<br>
     </div>
-    <div id="below chart"> <button style="width: 89px; margin-top: -18px;" value="Hide All"
-        name="Hide All Button"
-        onclick="HideAll();">Hide
-        All</button><button style="width: 202px; margin-top: -18px;" value="Load More Data"
+    <div id="below chart"> 
+      <button style="width: 89px; margin-top: -18px;" value="Show Main" name="Show Main Button" onclick="ShowMain();">Show Main</button>
+      <button style="width: 89px; margin-top: -18px;" value="Show All" name="Show All Button" onclick="ShowAll();">Show All</button>
+      <button style="width: 89px; margin-top: -18px;" value="Hide All" name="Hide All Button" onclick="HideAll();">Hide All</button>
+      <button style="width: 202px; margin-top: -18px;" value="Load More Data"
         name="Load More Data"
         onclick="loadOneChannel();">Load
         More Historical Data </button>
       <select id="Channel Select">
       </select>
       <select id="Loads">
-        <option value="1">1 Load</option>
+        <option value="1" selected="selected">1 Load</option>
         <option value="2">2 Loads</option>
         <option value="3">3 Loads</option>
         <option value="4">4 Loads</option>
-        <option value="5" selected="selected">5 Loads</option>
+        <option value="5">5 Loads</option>
         <option value="6">6 Loads</option>
         <option value="7">7 Loads</option>
         <option value="8">8 Loads</option>
