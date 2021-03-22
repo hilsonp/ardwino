@@ -71,7 +71,7 @@ function ShowMain(){
   { 
     if (dynamicChart.series[index].name == 'Navigator')
       continue;
-    window.console && console.log('Series Number:',index,' Name:',dynamicChart.series[index].name);
+    //window.console && console.log('Series Number:',index,' Name:',dynamicChart.series[index].name);
     var serieName = dynamicChart.series[index].name;
     if (serieName.includes('Relay') || serieName.includes('Sky') || serieName.includes('Ground'))
     {
@@ -409,7 +409,6 @@ $(document).ready(function()
 
 	// draw the chart
   dynamicChart = new Highcharts.StockChart(chartOptions);
-  ShowMain();
 
   // update series number to account for the navigator series (The historical series at the bottom) which is the first series.
   for (var channelIndex=0; channelIndex<channelKeys.length; channelIndex++)  // iterate through each channel
@@ -418,13 +417,15 @@ $(document).ready(function()
     {
       for (var seriesIndex=0; seriesIndex<dynamicChart.series.length; seriesIndex++)  // compare each series name
       {
+        //window.console && console.log('serieName=', dynamicChart.series[seriesIndex].name, ' fieldName=', channelKeys[channelIndex].fieldList[fieldIndex].name);
         if (dynamicChart.series[seriesIndex].name == channelKeys[channelIndex].fieldList[fieldIndex].name)
         {
           channelKeys[channelIndex].fieldList[fieldIndex].series = seriesIndex;
         }
       }
     }
-  }          
+  }   
+
   // add all history
   //dynamicChart.showLoading("Loading History..." );
   window.console && console.log('Channels: ',channelKeys.length);
@@ -438,6 +439,9 @@ $(document).ready(function()
       }
     )(channelIndex);
   }
+
+  //ShowMain();
+
  }
 });
       
